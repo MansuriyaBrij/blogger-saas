@@ -1,23 +1,32 @@
-import { usePage, Link } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 
 const navLinks = [
-    { label: 'Dashboard', href: '/dashboard', icon: '▪' },
-    { label: 'Posts', href: '/posts', icon: '▪' },
-    { label: 'Labels', href: '/labels', icon: '▪' },
-    { label: 'Import', href: '/import', icon: '▪' },
-    { label: 'AI Generate', href: '/ai-generate', icon: '▪' },
-    { label: 'Notifications', href: '/notifications', icon: '▪' },
-    { label: 'Billing', href: '/billing', icon: '▪' },
-    { label: 'Settings', href: '/settings', icon: '▪' },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Posts', href: '/posts' },
+    { label: 'Labels', href: '/labels' },
+    { label: 'Import', href: '/import' },
+    { label: 'AI Generate', href: '/ai' },
+    { label: 'Notifications', href: '/notifications' },
+    { label: 'Billing', href: '/billing' },
+    { label: 'Settings', href: '/settings' },
 ];
 
 export default function AppLayout({ children }) {
-    const { auth } = usePage().props;
+    const { auth, blogs = [], selected_blog_id } = usePage().props;
     const user = auth?.user;
 
     const initials = user?.name
         ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
         : 'U';
+
+    const selectedBlogName = blogs.find((b) => b.id === selected_blog_id)?.blog_name ?? 'Select Blog';
+
+    function handleBlogSwitch(e) {
+        const blogId = Number(e.target.value);
+        if (!blogId) return;
+        axios.post('/blogs/switch', { blog_id: blogId }).then(() => router.reload());
+    }
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -63,12 +72,25 @@ export default function AppLayout({ children }) {
                 <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0">
                     {/* Blog switcher */}
                     <div>
-                        <button className="flex items-center gap-2 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-                            <span>Select Blog</span>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
+                        {blogs.length > 0 ? (
+                            <select
+                                value={selected_blog_id ?? ''}
+                                onChange={handleBlogSwitch}
+                                className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="" disabled>Select Blog</option>
+                                {blogs.map((blog) => (
+                                    <option key={blog.id} value={blog.id}>{blog.blog_name}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <Link
+                                href="/blogs"
+                                className="text-sm text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                            >
+                                Connect a blog
+                            </Link>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-3">

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -13,7 +15,12 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::inertia('/dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
+    Route::post('/blogs/connect', [BlogController::class, 'connect'])->name('blogs.connect');
+    Route::post('/blogs/switch', [BlogController::class, 'switchBlog'])->name('blogs.switch');
 });
 
 require __DIR__.'/settings.php';
