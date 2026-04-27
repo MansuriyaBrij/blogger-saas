@@ -1,6 +1,10 @@
 <?php
 
-use App\Models\User;
+use Laravel\Fortify\Features;
+
+beforeEach(function () {
+    $this->skipUnlessFortifyHas(Features::registration());
+});
 
 test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
@@ -17,7 +21,5 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-
-    $user = User::where('email', 'test@example.com')->first();
-    $response->assertRedirect(route('dashboard'));
+    $response->assertRedirect(route('dashboard', absolute: false));
 });

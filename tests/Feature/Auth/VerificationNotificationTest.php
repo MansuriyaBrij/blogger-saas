@@ -3,6 +3,11 @@
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
+use Laravel\Fortify\Features;
+
+beforeEach(function () {
+    $this->skipUnlessFortifyHas(Features::emailVerification());
+});
 
 test('sends verification notification', function () {
     Notification::fake();
@@ -23,7 +28,7 @@ test('does not send verification notification if email is verified', function ()
 
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect('/dashboard');
+        ->assertRedirect(route('dashboard', absolute: false));
 
     Notification::assertNothingSent();
 });
