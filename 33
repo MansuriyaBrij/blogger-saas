@@ -1,0 +1,212 @@
+Project: C:\herd\project\blogger-saas-v2
+Stack: Laravel 13 + Inertia.js + React + Tailwind + MySQL
+Phase 1 + Phase 2 complete.
+Do NOT run composer or npm commands. Use PowerShell for shell commands.
+
+PHASE 3 — Posts Management + Labels + Bulk Operations
+
+1. Create app/Http/Controllers/PostController.php:
+   - index(Request $request):
+       * get selected_blog_id from session
+       * query Post::where('blogger_account_id', $blogId)
+       * filters: status (LIVE/DRAFT/SCHEDULED), label (json contains), 
+         search (title LIKE), date_from, date_to
+       * paginate(20), preserve query string
+       * Inertia::render('Posts/Index', [posts, filters, selected_blog])
+   - show(Post $post):
+       * authorize: post belongs to auth user
+       * Inertia::render('Posts/Show', [post])
+   - update(UpdatePostRequest $request, Post $post):
+       * authorize: post belongs to auth user
+       * update local DB: title, content, labels, status
+       * dispatch UpdatePostOnBloggerJob
+       * return back()->with('success', 'Post updated')
+   - toggleStatus(Post $post):
+       * authorize post
+       * if LIVE → dispatch RevertToDraftJob
+       * if DRAFT → dispatch PublishPostJob
+       * return back()->with('success', 'Status updated')
+   - destroy(Post $post):
+       * authorize post
+       * dispatch DeletePostOnBloggerJob
+       * $post->delete() from local DB
+       * return back()->with('success', 'Post deleted')
+
+2. Create app/Http/Requests/UpdatePostRequest.php:
+   - rules: title required|string|max:255,
+     content required|string,
+     labels nullable|array,
+     labels.* string,
+     status in:LIVE,DRAFT,SCHEDULED
+
+3. Create app/Http/Controllers/LabelController.php:
+   - index():
+       * get selected_blog_id from session
+       * Label::where('blogger_account_id', $blogId)->orderByDesc('post_count')->get()
+       * Inertia::render('Labels/Index', [labels])
+   - rename(Request $request, Label $label):
+       * validate: name required|string|max:100
+       * authorize label belongs to auth user
+       * dispatch RenameLabelJob($label, $request->name)
+       * return back()->with('success', 'Label rename queued')
+   - merge(Request $request):
+       * validate: source_id, target_id both exist in user labels
+       * dispatch MergeLabelJob($sourceLabel, $targetLabel)
+       * return back()->with('success', 'Label merge queued')
+   - destroy(Label $label):
+       * authorize label belongs to auth user
+       * dispatch DeleteLabelJob($label)
+       * return back()->with('success', 'Label delete queued')
+
+4. Create app/Http/Controllers/BulkController.php:
+   - handle(Request $request):
+       * validate: action in:publish,draft,delete,label_add,label_remove
+         post_ids array|required, label_name string (required if action is label_add/remove)
+       * authorize: all post_ids belong to auth user
+       * create BulkOperation record: [user_id, blogger_account_id, type=action,
+         total=count(post_ids), status=pending]
+       * dispatch BulkOperationJob($bulkOperation, $request->post_ids, $request->label_name)
+       * return response()->json(['message' => 'Bulk operation queued', 'id' => $bulkOperation->id])
+   - status(BulkOperation $bulkOperation):
+       * authorize belongs to auth user
+       * return response()->json($bulkOperation)
+
+5. Create app/Jobs/UpdatePostOnBloggerJob.php:
+   - implements ShouldQueue, tries: 3
+   - Constructor: Post $post
+   - handle():
+       * BloggerService->updatePost($post->bloggerAccount->blog_id, $post->blogger_post_id, [
+           title: $post->title, content: $post->content, labels: $post->labels
+         ])
+
+6. Create app/Jobs/PublishPostJob.php:
+   - implements ShouldQueue, tries: 3
+   - handle(): BloggerService->publishPost(blogId, postId)
+     update local Post status to LIVE
+
+7. Create app/Jobs/RevertToDraftJob.php:
+   - implements ShouldQueue, tries: 3
+   - handle(): BloggerService->revertToDraft(blogId, postId)
+     update local Post status to DRAFT
+
+8. Create app/Jobs/DeletePostOnBloggerJob.php:
+   - implements ShouldQueue, tries: 3
+   - handle(): BloggerService->deletePost(blogId, postId)
+
+9. Create app/Jobs/BulkOperationJob.php:
+   - implements ShouldQueue, tries: 1, timeout: 300
+   - Constructor: BulkOperation $bulkOperation, array $postIds, ?string $labelName
+   - handle():
+       * $bulkOperation->update(['status' => 'running'])
+       * foreach $postIds as $postId:
+           - fetch Post, call appropriate Blogger API method based on type
+           - on success: increment success count
+           - on fail: increment failed count, append to error_log
+       * $bulkOperation->update(['status' => 'done', 'completed_at' => now()])
+       * broadcast BulkOperationCompleted event
+       * send notification to user
+
+10. Create app/Jobs/RenameLabelJob.php:
+    - implements ShouldQueue, tries: 3
+    - Constructor: Label $label, string $newName
+    - handle():
+        * get all posts with this label in blogger_account
+        * foreach post: update labels array (replace old with new), dispatch UpdatePostOnBloggerJob
+        * update Label name in DB
+
+11. Create app/Jobs/MergeLabelJob.php:
+    - implements ShouldQueue, tries: 3
+    - Constructor: Label $source, Label $target
+    - handle():
+        * get all posts with source label
+        * foreach: add target label if not exists, remove source label, dispatch UpdatePostOnBloggerJob
+        * delete source Label from DB, update target post_count
+
+12. Create app/Jobs/DeleteLabelJob.php:
+    - implements ShouldQueue, tries: 3
+    - Constructor: Label $label
+    - handle():
+        * get all posts with this label
+        * foreach: remove label from array, dispatch UpdatePostOnBloggerJob
+        * delete Label from DB
+
+13. Add to app/Services/BloggerService.php — new methods:
+    - updatePost(string $blogId, string $postId, array $data): update via Blogger API
+    - publishPost(string $blogId, string $postId): POST to /publish endpoint
+    - revertToDraft(string $blogId, string $postId): POST to /revert endpoint
+    - deletePost(string $blogId, string $postId): DELETE via Blogger API
+
+14. Create app/Events/BulkOperationCompleted.php:
+    - implements ShouldBroadcast
+    - broadcastOn(): PrivateChannel('user.' . $user->id)
+    - broadcastWith(): [type, total, success, failed, completed_at]
+
+15. Create app/Policies/PostPolicy.php:
+    - view, update, delete: return $post->user_id === $user->id
+
+16. Create app/Policies/LabelPolicy.php:
+    - view, update, delete: return $label->user_id === $user->id
+
+17. Register both policies in app/Providers/AppServiceProvider.php
+
+18. Update routes/web.php — inside auth middleware group add:
+    - GET /posts → PostController@index
+    - GET /posts/{post} → PostController@show
+    - PUT /posts/{post} → PostController@update
+    - POST /posts/{post}/toggle-status → PostController@toggleStatus
+    - DELETE /posts/{post} → PostController@destroy
+    - GET /labels → LabelController@index
+    - PUT /labels/{label}/rename → LabelController@rename
+    - POST /labels/merge → LabelController@merge
+    - DELETE /labels/{label} → LabelController@destroy
+    - POST /bulk → BulkController@handle
+    - GET /bulk/{bulkOperation}/status → BulkController@status
+
+19. Create resources/js/Pages/Posts/Index.jsx:
+    - Uses AppLayout
+    - Filter bar: search input, status dropdown, label dropdown, date range
+    - Posts data table:
+        * Checkbox column (select all + individual)
+        * Title (clickable → show page)
+        * Status badge: green=LIVE, yellow=SCHEDULED, gray=DRAFT
+        * Labels: pill badges
+        * Published date
+        * Actions: Edit, Toggle Status, Delete
+    - Bulk action bar (appears when checkboxes selected):
+        * Shows count: "5 posts selected"
+        * Buttons: Publish, Draft, Delete, Add Label, Remove Label
+        * Add/Remove Label shows input for label name
+    - Pagination
+    - Flash success/error messages
+
+20. Create resources/js/Pages/Posts/Show.jsx:
+    - Uses AppLayout
+    - Editable form: title input, rich content textarea, labels tag input, status select
+    - Save button → PUT /posts/{id}
+    - Toggle Status button
+    - Back to posts link
+
+21. Create resources/js/Pages/Labels/Index.jsx:
+    - Uses AppLayout
+    - Labels grid: name, post_count badge, rename button, merge button, delete button
+    - Rename: inline input or modal → PUT /labels/{id}/rename
+    - Merge: select dropdown (pick target label) → POST /labels/merge
+    - Delete: confirm dialog → DELETE /labels/{id}
+    - Empty state if no labels
+
+22. Create tests/Feature/PostManagementTest.php — Pest tests:
+    test('user can view their posts with filters')
+    test('user can update a post')
+    test('user cannot update another users post')
+    test('toggle status dispatches correct job')
+    test('bulk operation creates bulk_operation record')
+    test('bulk operation job updates success and failed counts')
+
+23. Create tests/Feature/LabelManagementTest.php — Pest tests:
+    test('user can view labels for selected blog')
+    test('rename label dispatches RenameLabelJob')
+    test('merge label dispatches MergeLabelJob')
+    test('user cannot manage another users label')
+
+Show summary of all files created/modified.
+Do NOT run migrate, composer, or npm.

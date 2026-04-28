@@ -2,9 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Label;
+use App\Models\Post;
+use App\Policies\LabelPolicy;
+use App\Policies\PostPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +29,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerPolicies();
+    }
+
+    protected function registerPolicies(): void
+    {
+        Gate::policy(Post::class, PostPolicy::class);
+        Gate::policy(Label::class, LabelPolicy::class);
     }
 
     /**

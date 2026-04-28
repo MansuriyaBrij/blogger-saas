@@ -125,4 +125,48 @@ class BloggerService
             throw BloggerApiException::fromGoogleException($e);
         }
     }
+
+    public function updatePost(string $blogId, string $postId, array $data): void
+    {
+        try {
+            $service = $this->getClient();
+            $post = new \Google_Service_Blogger_Post();
+            $post->setTitle($data['title']);
+            $post->setContent($data['content']);
+            $post->setLabels($data['labels'] ?? []);
+            $service->posts->patch($blogId, $postId, $post);
+        } catch (Google_Service_Exception $e) {
+            throw BloggerApiException::fromGoogleException($e);
+        }
+    }
+
+    public function publishPost(string $blogId, string $postId): void
+    {
+        try {
+            $service = $this->getClient();
+            $service->posts->publish($blogId, $postId);
+        } catch (Google_Service_Exception $e) {
+            throw BloggerApiException::fromGoogleException($e);
+        }
+    }
+
+    public function revertToDraft(string $blogId, string $postId): void
+    {
+        try {
+            $service = $this->getClient();
+            $service->posts->revert($blogId, $postId);
+        } catch (Google_Service_Exception $e) {
+            throw BloggerApiException::fromGoogleException($e);
+        }
+    }
+
+    public function deletePost(string $blogId, string $postId): void
+    {
+        try {
+            $service = $this->getClient();
+            $service->posts->delete($blogId, $postId);
+        } catch (Google_Service_Exception $e) {
+            throw BloggerApiException::fromGoogleException($e);
+        }
+    }
 }

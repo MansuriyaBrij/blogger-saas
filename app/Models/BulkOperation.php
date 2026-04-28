@@ -2,19 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Label extends Model
+class BulkOperation extends Model
 {
-    use HasFactory;
     protected $fillable = [
         'user_id',
         'blogger_account_id',
-        'name',
-        'post_count',
+        'type',
+        'total',
+        'success_count',
+        'failed_count',
+        'error_log',
+        'status',
+        'completed_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'error_log'    => 'array',
+            'completed_at' => 'datetime',
+        ];
+    }
 
     public function user(): BelongsTo
     {
