@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Post;
+use App\Notifications\PostPublished;
 use App\Services\BloggerService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,6 +26,8 @@ class PublishPostJob implements ShouldQueue
         app()->makeWith(BloggerService::class, ['user' => $this->post->user])
             ->publishPost($account->blog_id, $this->post->blogger_post_id);
 
-        $this->post->update(['status' => 'LIVE']);
+        $this->post->update(['status' => 'LIVE', 'published_at' => now()]);
+
+        $this->post->user->notify(new PostPublished($this->post));
     }
 }

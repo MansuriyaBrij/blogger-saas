@@ -7,6 +7,7 @@ use App\Models\BloggerAccount;
 use App\Models\Label;
 use App\Models\Post;
 use App\Models\User;
+use App\Notifications\BlogSynced;
 use App\Services\BloggerService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -72,5 +73,8 @@ class SyncBlogPostsJob implements ShouldQueue
         $this->bloggerAccount->update(['last_synced_at' => now()]);
 
         broadcast(new SyncCompleted($this->user, $this->bloggerAccount));
+
+        $postCount = Post::where('blogger_account_id', $this->bloggerAccount->id)->count();
+        $this->user->notify(new BlogSynced($this->bloggerAccount, $postCount));
     }
 }

@@ -7,10 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Legacy alias kept for backwards compatibility — delegates to BulkActionCompleted.
- */
-class BulkOperationDoneNotification extends Notification
+class BulkActionCompleted extends Notification
 {
     use Queueable;
 
@@ -31,10 +28,10 @@ class BulkOperationDoneNotification extends Notification
             'body'  => ucfirst($op->type) . ": {$op->success_count} succeeded, {$op->failed_count} failed.",
             'url'   => '/posts',
             'data'  => [
-                'action'            => $op->type,
-                'total'             => $op->total,
-                'succeeded'         => $op->success_count,
-                'failed'            => $op->failed_count,
+                'action'           => $op->type,
+                'total'            => $op->total,
+                'succeeded'        => $op->success_count,
+                'failed'           => $op->failed_count,
                 'bulk_operation_id' => $op->id,
             ],
         ];
