@@ -38,7 +38,7 @@ class BlogController extends Controller
         }
 
         if (empty($remoteBlogs)) {
-            return redirect()->back()->with('error', 'No Blogger blogs found on your Google account.');
+            return redirect()->route('blogs.index')->with('error', 'No Blogger blogs found on your Google account.');
         }
 
         foreach ($remoteBlogs as $blogData) {
@@ -56,7 +56,7 @@ class BlogController extends Controller
 
         $count = count($remoteBlogs);
 
-        return redirect()->back()->with('success', "Connected {$count} blog(s). Posts are syncing in the background.");
+        return redirect()->route('blogs.index')->with('success', "Connected {$count} blog(s). Posts are syncing in the background.");
     }
 
     public function sync(BloggerAccount $bloggerAccount): RedirectResponse

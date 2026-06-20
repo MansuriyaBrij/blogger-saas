@@ -13,6 +13,7 @@ class AuthController extends Controller
     {
         return Socialite::driver('google')
             ->scopes(['https://www.googleapis.com/auth/blogger'])
+            ->with(['access_type' => 'offline', 'prompt' => 'consent'])
             ->redirect();
     }
 
@@ -23,13 +24,18 @@ class AuthController extends Controller
         $user = User::updateOrCreate(
             ['google_id' => $googleUser->getId()],
             [
-                'name' => $googleUser->getName(),
-                'email' => $googleUser->getEmail(),
-                'google_access_token' => encrypt($googleUser->token),
-                'google_refresh_token' => encrypt($googleUser->refreshToken ?? ''),
+                'name'                    => $googleUser->getName(),
+                'email'                   => $googleUser->getEmail(),
+                'google_access_token'     => encrypt($googleUser->token),
                 'google_token_expires_at' => now()->addSeconds($googleUser->expiresIn ?? 3600),
             ]
         );
+
+        // Only overwrite refresh token when Google actually returns one
+        // (Google only sends it on first consent or when prompt=consent is forced)
+        if ($googleUser->refreshToken) {
+            $user->update(['google_refresh_token' => encrypt($googleUser->refreshToken)]);
+        }
 
         Auth::login($user, remember: true);
 

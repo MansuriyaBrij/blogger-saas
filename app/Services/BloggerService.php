@@ -16,6 +16,10 @@ class BloggerService
 
     private function getClient(): Google_Service_Blogger
     {
+        if (empty($this->user->google_access_token)) {
+            throw new BloggerApiException('No Google account connected. Please connect your Google account.');
+        }
+
         if ($this->user->google_token_expires_at && $this->user->google_token_expires_at->isPast()) {
             $this->refreshToken();
             $this->user->refresh();
@@ -45,6 +49,11 @@ class BloggerService
 
     private function refreshToken(): void
     {
+        if (empty($this->user->google_refresh_token)) {
+            $this->clearTokens();
+            throw new BloggerApiException('No refresh token available. Please reconnect your Google account.');
+        }
+
         try {
             $refreshToken = decrypt($this->user->google_refresh_token);
         } catch (DecryptException) {

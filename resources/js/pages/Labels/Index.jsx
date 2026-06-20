@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+import AppLayout from '../../layouts/AppLayout';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 

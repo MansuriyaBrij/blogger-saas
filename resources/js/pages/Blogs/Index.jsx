@@ -1,5 +1,5 @@
-import AppLayout from '@/Layouts/AppLayout';
-import { useForm, usePage, router } from '@inertiajs/react';
+import AppLayout from '../../layouts/AppLayout';
+import { usePage, router } from '@inertiajs/react';
 
 function formatDate(dateStr) {
     if (!dateStr) return 'Never';
@@ -8,10 +8,10 @@ function formatDate(dateStr) {
 
 export default function BlogsIndex({ blogs }) {
     const { flash } = usePage().props;
-    const { post, processing } = useForm();
 
     function handleConnect() {
-        post('/blogs/connect');
+        // Full page navigation so the server-side redirect to Google OAuth works
+        window.location.href = '/blogs/connect';
     }
 
     function handleSync(blogId) {
@@ -34,10 +34,9 @@ export default function BlogsIndex({ blogs }) {
                     </div>
                     <button
                         onClick={handleConnect}
-                        disabled={processing}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                     >
-                        {processing ? 'Connecting…' : '+ Connect Blogs'}
+                        + Connect Blogs
                     </button>
                 </div>
 
@@ -65,10 +64,9 @@ export default function BlogsIndex({ blogs }) {
                         <p className="text-sm text-gray-500 mb-4">Connect your Google Blogger account to get started.</p>
                         <button
                             onClick={handleConnect}
-                            disabled={processing}
-                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                         >
-                            {processing ? 'Connecting…' : 'Connect Blogs'}
+                            Connect Blogs
                         </button>
                     </div>
                 ) : (

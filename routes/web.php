@@ -14,6 +14,7 @@ Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
+Route::get('/login', [AuthController::class, 'redirectToGoogle'])->name('login');
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle'])->name('auth.google.redirect');
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
@@ -23,7 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
-    Route::post('/blogs/connect', [BlogController::class, 'connect'])->name('blogs.connect');
+    Route::get('/blogs/connect', [BlogController::class, 'connect'])->name('blogs.connect');
     Route::post('/blogs/switch', [BlogController::class, 'switchBlog'])->name('blogs.switch');
     Route::post('/blogs/{bloggerAccount}/sync', [BlogController::class, 'sync'])->name('blogs.sync');
     Route::delete('/blogs/{bloggerAccount}', [BlogController::class, 'destroy'])->name('blogs.destroy');

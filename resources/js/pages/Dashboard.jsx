@@ -1,4 +1,4 @@
-import AppLayout from '@/Layouts/AppLayout';
+import AppLayout from '../layouts/AppLayout';
 
 const statusStyles = {
     LIVE: 'bg-green-100 text-green-700',
