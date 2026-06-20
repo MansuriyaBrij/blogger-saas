@@ -24,6 +24,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
     Route::post('/blogs/connect', [BlogController::class, 'connect'])->name('blogs.connect');
     Route::post('/blogs/switch', [BlogController::class, 'switchBlog'])->name('blogs.switch');
+    Route::post('/blogs/{bloggerAccount}/sync', [BlogController::class, 'sync'])->name('blogs.sync');
+    Route::delete('/blogs/{bloggerAccount}', [BlogController::class, 'destroy'])->name('blogs.destroy');
 
     Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
     Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');

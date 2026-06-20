@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage, router } from '@inertiajs/react';
 
 function formatDate(dateStr) {
     if (!dateStr) return 'Never';
@@ -12,6 +12,15 @@ export default function BlogsIndex({ blogs }) {
 
     function handleConnect() {
         post('/blogs/connect');
+    }
+
+    function handleSync(blogId) {
+        router.post(`/blogs/${blogId}/sync`);
+    }
+
+    function handleDisconnect(blogId, blogName) {
+        if (!confirm(`Disconnect "${blogName}"? This will remove all synced posts and labels.`)) return;
+        router.delete(`/blogs/${blogId}`);
     }
 
     return (
@@ -28,14 +37,19 @@ export default function BlogsIndex({ blogs }) {
                         disabled={processing}
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
                     >
-                        {processing ? 'Connecting…' : 'Connect Blogs'}
+                        {processing ? 'Connecting…' : '+ Connect Blogs'}
                     </button>
                 </div>
 
-                {/* Flash message */}
+                {/* Flash messages */}
                 {flash?.success && (
                     <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
                         {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                        {flash.error}
                     </div>
                 )}
 
@@ -73,17 +87,25 @@ export default function BlogsIndex({ blogs }) {
                                     </a>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs text-gray-400">
-                                    <span>Last synced: {formatDate(blog.last_synced_at)}</span>
+                                <div className="text-xs text-gray-400">
+                                    Last synced: {formatDate(blog.last_synced_at)}
                                 </div>
 
-                                <button
-                                    onClick={handleConnect}
-                                    disabled={processing}
-                                    className="mt-auto text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 text-left transition-colors"
-                                >
-                                    Sync Now →
-                                </button>
+                                <div className="flex items-center gap-3 mt-auto pt-2 border-t border-gray-50">
+                                    <button
+                                        onClick={() => handleSync(blog.id)}
+                                        className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                                    >
+                                        Sync Now
+                                    </button>
+                                    <span className="text-gray-200">|</span>
+                                    <button
+                                        onClick={() => handleDisconnect(blog.id, blog.blog_name)}
+                                        className="text-xs font-medium text-red-400 hover:text-red-600 transition-colors"
+                                    >
+                                        Disconnect
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -7,6 +7,7 @@ use App\Models\User;
 use Google\Service\Exception as Google_Service_Exception;
 use Google_Client;
 use Google_Service_Blogger;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Http;
 
 class BloggerService
@@ -20,15 +21,36 @@ class BloggerService
             $this->user->refresh();
         }
 
+        try {
+            $accessToken = decrypt($this->user->google_access_token);
+        } catch (DecryptException) {
+            $this->clearTokens();
+            throw new BloggerApiException('Your Google session has expired. Please reconnect your Google account.');
+        }
+
         $client = new Google_Client();
-        $client->setAccessToken(decrypt($this->user->google_access_token));
+        $client->setAccessToken($accessToken);
 
         return new Google_Service_Blogger($client);
     }
 
+    private function clearTokens(): void
+    {
+        $this->user->update([
+            'google_access_token' => null,
+            'google_refresh_token' => null,
+            'google_token_expires_at' => null,
+        ]);
+    }
+
     private function refreshToken(): void
     {
-        $refreshToken = decrypt($this->user->google_refresh_token);
+        try {
+            $refreshToken = decrypt($this->user->google_refresh_token);
+        } catch (DecryptException) {
+            $this->clearTokens();
+            throw new BloggerApiException('Your Google session has expired. Please reconnect your Google account.');
+        }
 
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'client_id' => config('services.google.client_id'),
